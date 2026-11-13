@@ -1,26 +1,29 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
-        return res.status(405).json({ error: 'Método não permitido' });
+        return res.status(405).json({ error: 'Método não permitido.' });
     }
 
     if (!req.body || typeof req.body !== 'object') {
         return res.status(400).json({ error: 'Corpo da requisição inválido.' });
     }
 
-    const textMessage = typeof req.body.message === 'string' ? req.body.message.trim() : '';
-    if (!textMessage) {
+    const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
+    if (!message) {
         return res.status(400).json({ error: 'Digite uma mensagem.' });
     }
-    if (textMessage.length > 4000) {
+    if (message.length > 4000) {
         return res.status(413).json({ error: 'A mensagem deve ter no máximo 4.000 caracteres.' });
     }
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
+        console.error('GROQ_API_KEY não está configurada.');
         return res.status(500).json({ error: 'O serviço de IA não está configurado no servidor.' });
     }
 
+    // Pode ser substituído no ambiente do deploy se este modelo não estiver habilitado na conta.
+    const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
     const systemPrompt = 'Você é o NexusOS, um assistente pessoal prestativo, inteligente e focado em produtividade. Responda de forma clara, natural e agradável.';
 
     try {
@@ -31,10 +34,10 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
+                model,
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    { role: 'user', content: textMessage }
+                    { role: 'user', content: message }
                 ],
                 temperature: 0.7,
                 max_tokens: 1024
@@ -42,9 +45,19 @@ export default async function handler(req, res) {
         });
 
         if (!groqResponse.ok) {
-            const errorText = await groqResponse.text();
-            console.error('Erro retornado pela Groq:', errorText);
-            return res.status(502).json({ error: 'Falha ao consultar o serviço de IA.' });
+            const providerError = await groqResponse.text();
+            // Não retorne os detalhes crus do provedor ao navegador.
+            console.error(`Groq respondeu HTTP ${groqResponse.status} para o modelo ${model}:`, providerError);
+            if (groqResponse.status === 401 || groqResponse.status === 403) {
+                return res.status(502).json({ error: 'A chave da Groq foi recusada. Confira GROQ_API_KEY nas variáveis do deploy.' });
+            }
+            if (groqResponse.status === 404) {
+                return res.status(502).json({ error: `O modelo Groq configurado (${model}) não foi encontrado. Confira GROQ_MODEL e os modelos disponíveis na sua conta.` });
+            }
+            if (groqResponse.status === 429) {
+                return res.status(503).json({ error: 'A cota ou o limite de requisições da Groq foi atingido. Tente novamente mais tarde.' });
+            }
+            return res.status(502).json({ error: `A Groq não conseguiu processar a solicitação (HTTP ${groqResponse.status}). Consulte os logs do deploy.` });
         }
 
         const data = await groqResponse.json();
@@ -56,7 +69,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ reply });
     } catch (error) {
-        console.error('Erro na requisição à Groq:', error);
-        return res.status(500).json({ error: 'Falha interna de comunicação com o modelo.' });
+        console.error('Falha de comunicação com a Groq:', error);
+        return res.status(500).json({ error: 'Falha de comunicação com o serviço de IA. Consulte os logs do deploy.' });
     }
 }
