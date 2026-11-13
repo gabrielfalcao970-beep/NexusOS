@@ -2,14 +2,17 @@ const firebaseConfig = {
     apiKey: "AIzaSyDV-cUoW9nC6LZrXkHyTa8GBnphFK32DSI",
     authDomain: "nexusos-96d4d.firebaseapp.com",
     projectId: "nexusos-96d4d",
-    storageBucket: "nexusos-96d4d.appspot.com",
+    storageBucket: "nexusos-96d4d.firebasestorage.app",
     messagingSenderId: "801996261517",
     appId: "1:801996261517:web:b40ccea858e18a4b997ac4"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+const auth = firebase && firebase.auth ? firebase.auth() : null;
+const googleProvider = auth ? new firebase.auth.GoogleAuthProvider() : null;
 
 const authScreen = document.getElementById('auth-screen');
 const desktopScreen = document.getElementById('desktop-screen');
@@ -25,60 +28,83 @@ const sendBtn = document.getElementById('send-btn');
 let currentUser = null;
 let userLocation = 'Localização não obtida';
 
-// Alterado para usar Redirect em vez de Popup (evita fechamento indesejado no Brave e celulares)
-googleLoginBtn.addEventListener('click', () => {
-    auth.signInWithRedirect(googleProvider).catch((error) => {
-        console.error("Erro no login:", error);
+if (googleLoginBtn && auth && googleProvider) {
+    googleLoginBtn.addEventListener('click', () => {
+        auth.signInWithRedirect(googleProvider).catch((error) => {
+            console.error('Erro no login:', error);
+            appendMessage('Não foi possível iniciar o login com o Google.', 'ai-message');
+        });
     });
-});
+}
 
-logoutBtn.addEventListener('click', () => {
-    auth.signOut();
-});
+if (logoutBtn && auth) {
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut().catch((error) => {
+            console.error('Erro no logout:', error);
+        });
+    });
+}
 
-// Captura o retorno do redirecionamento do Google
-auth.getRedirectResult().catch((error) => {
-    console.error("Erro no redirect:", error);
-});
+if (auth) {
+    auth.getRedirectResult().catch((error) => {
+        console.error('Erro no redirect:', error);
+    });
+}
 
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        currentUser = user;
-        authScreen.classList.add('hidden');
-        desktopScreen.classList.remove('hidden');
-        userAvatar.src = user.photoURL || 'https://via.placeholder.com/35';
-        userName.textContent = user.displayName || 'Usuário';
-        gatherTelemetry();
-    } else {
-        currentUser = null;
-        desktopScreen.classList.add('hidden');
-        authScreen.classList.remove('hidden');
-    }
-});
+if (auth) {
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUser = user;
+            if (authScreen) authScreen.classList.add('hidden');
+            if (desktopScreen) desktopScreen.classList.remove('hidden');
+            if (userAvatar) userAvatar.src = user.photoURL || 'https://via.placeholder.com/35';
+            if (userName) userName.textContent = user.displayName || 'Usuário';
+            gatherTelemetry();
+        } else {
+            currentUser = null;
+            if (desktopScreen) desktopScreen.classList.add('hidden');
+            if (authScreen) authScreen.classList.remove('hidden');
+        }
+    });
+}
 
 function gatherTelemetry() {
     const platform = navigator.platform || 'Desconhecida';
     const cores = navigator.hardwareConcurrency || 'N/D';
     const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/D';
-    
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
             userLocation = `Lat: ${position.coords.latitude.toFixed(2)}, Lon: ${position.coords.longitude.toFixed(2)}`;
-            telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory} | Loc: ${userLocation}`;
+            if (telemetryDisplay) {
+                telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory} | Loc: ${userLocation}`;
+            }
         }, () => {
-            telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory}`;
+            if (telemetryDisplay) {
+                telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory}`;
+            }
         });
-    } else {
+    } else if (telemetryDisplay) {
         telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory}`;
     }
 }
 
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-});
+if (sendBtn) {
+    sendBtn.addEventListener('click', sendMessage);
+}
+
+if (userInput) {
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+}
 
 async function sendMessage() {
+    if (!currentUser) {
+        appendMessage('Você precisa fazer login antes de usar o NexusOS.', 'ai-message');
+        return;
+    }
+
     const text = userInput.value.trim();
     if (!text) return;
 
@@ -104,8 +130,13 @@ async function sendMessage() {
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
         const data = await response.json();
-        document.getElementById(loadingId).remove();
+        const element = document.getElementById(loadingId);
+        if (element) element.remove();
 
         if (data.reply) {
             appendMessage(data.reply, 'ai-message');
@@ -114,15 +145,18 @@ async function sendMessage() {
         }
     } catch (err) {
         console.error(err);
-        document.getElementById(loadingId).remove();
+        const element = document.getElementById(loadingId);
+        if (element) element.remove();
         appendMessage('Erro de conexão com o backend.', 'ai-message');
     }
 }
 
 function appendMessage(text, className) {
+    if (!chatMessages) return null;
+
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${className}`;
-    msgDiv.textContent = text;
+    msgDiv.textContent = String(text);
     const id = 'msg-' + Date.now();
     msgDiv.id = id;
     chatMessages.appendChild(msgDiv);
