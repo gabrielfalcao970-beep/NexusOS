@@ -25,14 +25,20 @@ const sendBtn = document.getElementById('send-btn');
 let currentUser = null;
 let userLocation = 'Localização não obtida';
 
+// Alterado para usar Redirect em vez de Popup (evita fechamento indesejado no Brave e celulares)
 googleLoginBtn.addEventListener('click', () => {
-    auth.signInWithPopup(googleProvider).catch((error) => {
+    auth.signInWithRedirect(googleProvider).catch((error) => {
         console.error("Erro no login:", error);
     });
 });
 
 logoutBtn.addEventListener('click', () => {
     auth.signOut();
+});
+
+// Captura o retorno do redirecionamento do Google
+auth.getRedirectResult().catch((error) => {
+    console.error("Erro no redirect:", error);
 });
 
 auth.onAuthStateChanged((user) => {
