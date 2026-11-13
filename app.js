@@ -2,7 +2,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyDV-cUoW9nC6LZrXkHyTa8GBnphFK32DSI",
     authDomain: "nexusos-96d4d.firebaseapp.com",
     projectId: "nexusos-96d4d",
-    storageBucket: "nexusos-96d4d.appspot.com",
+    storageBucket: "nexusos-96d4d.firebasestorage.app",
     messagingSenderId: "801996261517",
     appId: "1:801996261517:web:b40ccea858e18a4b997ac4"
 };
