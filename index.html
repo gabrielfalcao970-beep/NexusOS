@@ -22,6 +22,16 @@
 
         <main class="workspace">
             <section class="chat-container" aria-label="Conversa com NexusOS">
+                <div class="privacy-settings">
+                    <label for="display-name">Como quer ser chamado? <span>(opcional)</span></label>
+                    <input type="text" id="display-name" maxlength="80" autocomplete="nickname" placeholder="Seu nome ou apelido">
+                    <label class="consent-option" for="share-locale">
+                        <input type="checkbox" id="share-locale">
+                        <span>Permito enviar idioma e fuso horário do navegador junto com minhas mensagens para personalizar as respostas.</span>
+                    </label>
+                    <p class="privacy-note">Seu nome só é enviado quando você envia uma mensagem. Idioma e fuso só são enviados se você marcar a opção. Esses dados não são salvos pelo site; a mensagem e o contexto enviado são processados pela Groq para gerar a resposta.</p>
+                </div>
+
                 <div id="chat-messages" class="chat-messages" aria-live="polite" aria-relevant="additions">
                     <div class="message ai-message">
                         Olá! Sou o NexusOS. Como posso ajudar você hoje?

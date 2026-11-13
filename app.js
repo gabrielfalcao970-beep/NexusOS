@@ -2,6 +2,8 @@ const chatMessages = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+const displayNameInput = document.getElementById('display-name');
+const shareLocaleInput = document.getElementById('share-locale');
 
 chatForm?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -18,11 +20,25 @@ async function sendMessage() {
     sendBtn.textContent = 'Enviando...';
     const loadingId = appendMessage('Pensando...', 'ai-message');
 
+    const profile = {};
+    const displayName = displayNameInput?.value.trim();
+    if (displayName) profile.name = displayName.slice(0, 80);
+
+    // Só acessamos e enviamos os metadados de idioma/fuso após consentimento explícito.
+    if (shareLocaleInput?.checked) {
+        try {
+            profile.language = String(navigator.language || '').slice(0, 35);
+            profile.timeZone = String(Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 80);
+        } catch (error) {
+            console.warn('Não foi possível obter idioma/fuso horário:', error);
+        }
+    }
+
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({ message: text, profile })
         });
 
         const data = await response.json().catch(() => ({}));
