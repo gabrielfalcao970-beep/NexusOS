@@ -8,24 +8,20 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Corpo da requisição inválido.' });
     }
 
-    const { message, user, telemetry } = req.body;
-    const apiKey = process.env.GROQ_API_KEY;
-
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Chave da API da Groq não configurada no ambiente.' });
-    }
-
-    const textMessage = typeof message === 'string' ? message.trim() : '';
+    const textMessage = typeof req.body.message === 'string' ? req.body.message.trim() : '';
     if (!textMessage) {
-        return res.status(400).json({ error: 'Mensagem vazia.' });
+        return res.status(400).json({ error: 'Digite uma mensagem.' });
+    }
+    if (textMessage.length > 4000) {
+        return res.status(413).json({ error: 'A mensagem deve ter no máximo 4.000 caracteres.' });
     }
 
-    const systemPrompt = `Você é o NexusOS, um assistente pessoal prestativo, inteligente e focado em produtividade.
-Contexto fornecido pelo ambiente:
-- Usuário: ${user?.name || 'Desconhecido'} (${user?.email || 'Sem e-mail'})
-- Plataforma/dispositivo: ${telemetry?.platform || 'Desconhecida'}
-- Localização: ${telemetry?.location || 'Não informada'}
-Responda de forma natural e agradável. Use os dados de contexto apenas quando forem relevantes.`;
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'O serviço de IA não está configurado no servidor.' });
+    }
+
+    const systemPrompt = 'Você é o NexusOS, um assistente pessoal prestativo, inteligente e focado em produtividade. Responda de forma clara, natural e agradável.';
 
     try {
         const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
