@@ -3,49 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f1117">
-    <meta name="description" content="NexusOS — seu assistente pessoal inteligente.">
-    <title>NexusOS</title>
+    <meta name="theme-color" content="#080b12">
+    <meta name="description" content="NexusOS — seu espaço inteligente para conversar, criar e organizar ideias.">
+    <title>NexusOS — Assistente inteligente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="desktop-screen" class="screen">
-        <header class="topbar">
-            <div class="brand">
-                <span class="brand-mark" aria-hidden="true">N</span>
-                <div>
-                    <h1>NexusOS</h1>
-                    <p>Seu assistente pessoal</p>
-                </div>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação">
+            <a class="brand" href="#" aria-label="NexusOS início">
+                <span class="brand-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+                <span>Nexus<span class="brand-light">OS</span></span>
+            </a>
+            <button class="new-chat" id="new-chat-btn" type="button"><span aria-hidden="true">＋</span> Nova conversa</button>
+            <div class="sidebar-label">SEU ESPAÇO</div>
+            <div class="nav-item active"><span class="nav-icon" aria-hidden="true">✦</span> Assistente</div>
+            <div class="sidebar-bottom">
+                <div class="status-pill"><span class="status-dot"></span> Nexus está pronto</div>
+                <p class="sidebar-caption">Uma inteligência para acompanhar suas ideias.</p>
             </div>
-        </header>
+        </aside>
 
-        <main class="workspace">
-            <section class="chat-container" aria-label="Conversa com NexusOS">
-                <div class="privacy-settings">
-                    <label for="display-name">Como quer ser chamado? <span>(opcional)</span></label>
-                    <input type="text" id="display-name" maxlength="80" autocomplete="nickname" placeholder="Seu nome ou apelido">
-                    <label class="consent-option" for="share-locale">
-                        <input type="checkbox" id="share-locale">
-                        <span>Permito enviar idioma e fuso horário do navegador junto com minhas mensagens para personalizar as respostas.</span>
-                    </label>
-                    <p class="privacy-note">Seu nome só é enviado quando você envia uma mensagem. Idioma e fuso só são enviados se você marcar a opção. Esses dados não são salvos pelo site; a mensagem e o contexto enviado são processados pela Groq para gerar a resposta.</p>
+        <main class="main-panel">
+            <header class="topbar">
+                <div class="mobile-brand"><span class="brand-icon small" aria-hidden="true"><span></span><span></span><span></span></span>NexusOS</div>
+                <div class="topbar-context"><span class="context-dot"></span> Assistente pessoal <span class="context-divider">/</span> <span class="context-muted">Chat</span></div>
+                <button class="topbar-action" id="clear-chat-btn" type="button" title="Limpar conversa">Limpar conversa</button>
+            </header>
+
+            <section class="conversation" aria-label="Conversa com NexusOS">
+                <div class="profile-panel">
+                    <div class="profile-heading"><span class="profile-icon" aria-hidden="true">⌘</span><div><h2>Personalize seu espaço</h2><p>Opcional. Você controla o que compartilha.</p></div></div>
+                    <div class="profile-controls">
+                        <label class="name-field"><span>Como quer ser chamado?</span><input type="text" id="display-name" maxlength="80" autocomplete="nickname" placeholder="Seu nome ou apelido"></label>
+                        <label class="toggle-row" for="share-locale"><input type="checkbox" id="share-locale"><span class="toggle-track" aria-hidden="true"></span><span>Compartilhar idioma e fuso horário</span></label>
+                        <label class="toggle-row voice-toggle" for="voice-enabled"><input type="checkbox" id="voice-enabled"><span class="toggle-track" aria-hidden="true"></span><span>Ler respostas em voz alta</span></label>
+                    </div>
+                    <p class="privacy-note">Nome só é enviado com sua mensagem. Idioma/fuso apenas se autorizado. A voz usa a síntese de fala do seu navegador; nada é enviado para um serviço de voz.</p>
                 </div>
 
-                <div id="chat-messages" class="chat-messages" aria-live="polite" aria-relevant="additions">
-                    <div class="message ai-message">
-                        Olá! Sou o NexusOS. Como posso ajudar você hoje?
+                <div class="chat-scroll" id="chat-messages" aria-live="polite" aria-relevant="additions">
+                    <div class="welcome-block" id="welcome-block">
+                        <div class="welcome-orb" aria-hidden="true"><span></span><span></span><span></span></div>
+                        <p class="eyebrow">SEU ASSISTENTE INTELIGENTE</p>
+                        <h1>Boas ideias começam<br><span>com uma conversa.</span></h1>
+                        <p class="welcome-copy">Pergunte, explore ou organize seus próximos passos. Estou aqui para ajudar.</p>
+                        <div class="suggestions" aria-label="Sugestões de conversa">
+                            <button class="suggestion" type="button" data-prompt="Me ajude a organizar minhas tarefas de hoje."><span>◷</span> Organize meu dia</button>
+                            <button class="suggestion" type="button" data-prompt="Explique uma ideia complexa de um jeito simples."><span>✧</span> Explique uma ideia</button>
+                            <button class="suggestion" type="button" data-prompt="Me ajude a escrever um texto claro e profissional."><span>↗</span> Escreva comigo</button>
+                        </div>
                     </div>
                 </div>
-                <form id="chat-form" class="chat-input-area">
+
+                <form id="chat-form" class="composer">
                     <label class="visually-hidden" for="user-input">Sua mensagem</label>
-                    <input type="text" id="user-input" placeholder="Digite sua mensagem para o NexusOS..." autocomplete="off" maxlength="4000" required>
-                    <button id="send-btn" type="submit">Enviar</button>
+                    <textarea id="user-input" rows="1" maxlength="4000" placeholder="Pergunte qualquer coisa ao Nexus..." autocomplete="off" required></textarea>
+                    <div class="composer-footer"><span class="composer-hint">Enter para enviar <span>·</span> Shift + Enter para nova linha</span><button id="send-btn" type="submit"><span>Enviar</span><span class="send-arrow" aria-hidden="true">↑</span></button></div>
                 </form>
+                <p class="disclaimer">O NexusOS pode cometer erros. Confira informações importantes.</p>
             </section>
         </main>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
