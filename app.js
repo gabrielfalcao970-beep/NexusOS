@@ -2,14 +2,17 @@ const firebaseConfig = {
     apiKey: "AIzaSyDV-cUoW9nC6LZrXkHyTa8GBnphFK32DSI",
     authDomain: "nexusos-96d4d.firebaseapp.com",
     projectId: "nexusos-96d4d",
-    storageBucket: "nexusos-96d4d.appspot.com",
+    storageBucket: "nexusos-96d4d.firebasestorage.app",
     messagingSenderId: "801996261517",
     appId: "1:801996261517:web:b40ccea858e18a4b997ac4"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+const auth = firebase && firebase.auth ? firebase.auth() : null;
+const googleProvider = auth ? new firebase.auth.GoogleAuthProvider() : null;
 
 const authScreen = document.getElementById('auth-screen');
 const desktopScreen = document.getElementById('desktop-screen');
@@ -25,66 +28,83 @@ const sendBtn = document.getElementById('send-btn');
 let currentUser = null;
 let userLocation = 'Localização não obtida';
 
-// Alterado para usar Redirect em vez de Popup (evita fechamento indesejado no Brave e celulares)
-googleLoginBtn.addEventListener('click', () => {
-    auth.signInWithRedirect(googleProvider).catch((error) => {
-        console.error("Erro no login:", error);
+if (googleLoginBtn && auth && googleProvider) {
+    googleLoginBtn.addEventListener('click', () => {
+        auth.signInWithRedirect(googleProvider).catch((error) => {
+            console.error('Erro no login:', error);
+            appendMessage('Não foi possível iniciar o login com o Google.', 'ai-message');
+        });
     });
-});
+}
 
-logoutBtn.addEventListener('click', () => {
-    auth.signOut();
-});
+if (logoutBtn && auth) {
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut().catch((error) => {
+            console.error('Erro no logout:', error);
+        });
+    });
+}
 
-// Captura o retorno do redirecionamento do Google
-auth.getRedirectResult().catch((error) => {
-    console.error("Erro no redirect:", error);
-});
+if (auth) {
+    auth.getRedirectResult().catch((error) => {
+        console.error('Erro no redirect:', error);
+    });
 
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        currentUser = user;
-        authScreen.classList.add('hidden');
-        desktopScreen.classList.remove('hidden');
-        userAvatar.src = user.photoURL || 'https://via.placeholder.com/35';
-        userName.textContent = user.displayName || 'Usuário';
-        gatherTelemetry();
-    } else {
-        currentUser = null;
-        desktopScreen.classList.add('hidden');
-        authScreen.classList.remove('hidden');
-    }
-});
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUser = user;
+            if (authScreen) authScreen.classList.add('hidden');
+            if (desktopScreen) desktopScreen.classList.remove('hidden');
+            if (userAvatar) userAvatar.src = user.photoURL || 'https://via.placeholder.com/35';
+            if (userName) userName.textContent = user.displayName || 'Usuário';
+            gatherTelemetry();
+        } else {
+            currentUser = null;
+            if (desktopScreen) desktopScreen.classList.add('hidden');
+            if (authScreen) authScreen.classList.remove('hidden');
+        }
+    });
+} else if (authScreen) {
+    appendMessage('O serviço de autenticação não carregou. Atualize a página ou tente novamente mais tarde.', 'ai-message');
+}
 
 function gatherTelemetry() {
     const platform = navigator.platform || 'Desconhecida';
     const cores = navigator.hardwareConcurrency || 'N/D';
     const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/D';
-    
+    const baseTelemetry = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory}`;
+
+    if (telemetryDisplay) telemetryDisplay.textContent = baseTelemetry;
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
             userLocation = `Lat: ${position.coords.latitude.toFixed(2)}, Lon: ${position.coords.longitude.toFixed(2)}`;
-            telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory} | Loc: ${userLocation}`;
+            if (telemetryDisplay) telemetryDisplay.textContent = `${baseTelemetry} | Loc: ${userLocation}`;
         }, () => {
-            telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory}`;
+            userLocation = 'Localização não autorizada';
         });
-    } else {
-        telemetryDisplay.textContent = `SO: ${platform} | Núcleos: ${cores} | RAM aprox: ${memory}`;
     }
 }
 
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-});
+if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+if (userInput) {
+    userInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') sendMessage();
+    });
+}
 
 async function sendMessage() {
-    const text = userInput.value.trim();
+    if (!currentUser) {
+        appendMessage('Você precisa fazer login antes de usar o NexusOS.', 'ai-message');
+        return;
+    }
+
+    const text = userInput?.value.trim();
     if (!text) return;
 
     appendMessage(text, 'user-message');
     userInput.value = '';
-
+    if (sendBtn) sendBtn.disabled = true;
     const loadingId = appendMessage('Processando...', 'ai-message');
 
     try {
@@ -93,39 +113,41 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: text,
-                user: {
-                    name: currentUser.displayName,
-                    email: currentUser.email
-                },
-                telemetry: {
-                    platform: navigator.platform,
-                    location: userLocation
-                }
+                user: { name: currentUser.displayName, email: currentUser.email },
+                telemetry: { platform: navigator.platform, location: userLocation }
             })
         });
 
-        const data = await response.json();
-        document.getElementById(loadingId).remove();
-
-        if (data.reply) {
-            appendMessage(data.reply, 'ai-message');
-        } else {
-            appendMessage('Erro de resposta do servidor.', 'ai-message');
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
         }
-    } catch (err) {
-        console.error(err);
-        document.getElementById(loadingId).remove();
-        appendMessage('Erro de conexão com o backend.', 'ai-message');
+
+        removeMessage(loadingId);
+        appendMessage(data.reply || 'O servidor não retornou uma resposta.', 'ai-message');
+    } catch (error) {
+        console.error('Erro ao enviar mensagem:', error);
+        removeMessage(loadingId);
+        appendMessage(error.message || 'Erro de conexão com o backend.', 'ai-message');
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        if (userInput) userInput.focus();
     }
 }
 
 function appendMessage(text, className) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${className}`;
-    msgDiv.textContent = text;
-    const id = 'msg-' + Date.now();
-    msgDiv.id = id;
-    chatMessages.appendChild(msgDiv);
+    if (!chatMessages) return null;
+
+    const messageElement = document.createElement('div');
+    messageElement.className = `message ${className}`;
+    messageElement.textContent = String(text);
+    messageElement.id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    return id;
+    return messageElement.id;
+}
+
+function removeMessage(id) {
+    if (!id) return;
+    document.getElementById(id)?.remove();
 }
